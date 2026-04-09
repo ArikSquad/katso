@@ -1,11 +1,11 @@
 package eu.mikart.katso.minestom;
 
-import eu.mikart.katso.TopClickDecision;
-import eu.mikart.katso.ViewClick;
-import eu.mikart.katso.ViewClickType;
-import eu.mikart.katso.ViewManager;
-import eu.mikart.katso.ViewNavigator;
-import eu.mikart.katso.ViewSession;
+import eu.mikart.katso.context.ViewClick;
+import eu.mikart.katso.context.ViewClickType;
+import eu.mikart.katso.session.TopClickDecision;
+import eu.mikart.katso.session.ViewManager;
+import eu.mikart.katso.session.ViewNavigator;
+import eu.mikart.katso.session.ViewSession;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.inventory.InventoryClickEvent;
 import net.minestom.server.event.inventory.InventoryCloseEvent;

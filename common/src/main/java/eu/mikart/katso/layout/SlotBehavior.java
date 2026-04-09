@@ -1,4 +1,4 @@
-package eu.mikart.katso;
+package eu.mikart.katso.layout;
 
 public enum SlotBehavior {
     UI,

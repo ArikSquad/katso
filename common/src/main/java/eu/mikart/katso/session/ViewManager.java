@@ -1,4 +1,6 @@
-package eu.mikart.katso;
+package eu.mikart.katso.session;
+
+import eu.mikart.katso.platform.ViewPlatform;
 
 import java.util.Map;
 import java.util.Objects;

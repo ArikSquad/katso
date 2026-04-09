@@ -1,4 +1,4 @@
-package eu.mikart.katso;
+package eu.mikart.katso.session;
 
 public record TopClickDecision(boolean allowInventoryChange, boolean dispatchClickHandler) {
 

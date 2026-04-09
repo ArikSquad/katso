@@ -1,4 +1,4 @@
-package eu.mikart.katso;
+package eu.mikart.katso.context;
 
 public enum ViewClickType {
     LEFT,

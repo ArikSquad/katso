@@ -1,5 +1,21 @@
 package eu.mikart.katso;
 
+import eu.mikart.katso.context.ClickContext;
+import eu.mikart.katso.context.ViewClick;
+import eu.mikart.katso.layout.LayoutBuilder;
+import eu.mikart.katso.pagination.PaginatedState;
+import eu.mikart.katso.pagination.PaginatedView;
+import eu.mikart.katso.platform.ScheduledTask;
+import eu.mikart.katso.platform.ViewInventory;
+import eu.mikart.katso.platform.ViewPlatform;
+import eu.mikart.katso.session.SharedContext;
+import eu.mikart.katso.session.ViewManager;
+import eu.mikart.katso.session.ViewSession;
+import eu.mikart.katso.context.ViewContext;
+import eu.mikart.katso.view.StatefulView;
+import eu.mikart.katso.view.View;
+import eu.mikart.katso.view.ViewConfig;
+import eu.mikart.katso.view.ViewType;
 import net.kyori.adventure.text.Component;
 import org.junit.jupiter.api.Test;
 
@@ -223,25 +239,25 @@ class ViewApiCoreTest {
         }
 
         @Override
-        public ViewConfiguration<String, TestPlayer, String> configuration() {
-            return new ViewConfiguration<>("Editable", ViewType.CHEST_1_ROW);
+        public ViewConfig<String, TestPlayer, String> config() {
+            return ViewConfig.of(ViewType.CHEST_1_ROW, "Editable");
         }
 
         @Override
-        public void layout(ViewLayout<String, TestPlayer, String> layout, String state, ViewContext<TestPlayer, String> context) {
+        public void render(LayoutBuilder<String, TestPlayer, String> layout, ViewContext<String, TestPlayer, String> context) {
             layout.editable(0);
-            layout.allowHotkey(allowHotkey);
+            layout.allowHotbarSwap(allowHotkey);
         }
     }
 
     private static final class SeededSharedView implements View<String, TestPlayer, String> {
         @Override
-        public ViewConfiguration<String, TestPlayer, String> configuration() {
-            return new ViewConfiguration<>("Shared", ViewType.CHEST_1_ROW);
+        public ViewConfig<String, TestPlayer, String> config() {
+            return ViewConfig.of(ViewType.CHEST_1_ROW, "Shared");
         }
 
         @Override
-        public void layout(ViewLayout<String, TestPlayer, String> layout, String state, ViewContext<TestPlayer, String> context) {
+        public void render(LayoutBuilder<String, TestPlayer, String> layout, ViewContext<String, TestPlayer, String> context) {
             layout.editable(0, (currentState, currentContext) -> "seed", (slot, oldItem, newItem, current) -> {
             });
         }
@@ -254,13 +270,13 @@ class ViewApiCoreTest {
         }
 
         @Override
-        public ViewConfiguration<Boolean, TestPlayer, String> configuration() {
-            return new ViewConfiguration<>("Auto", ViewType.CHEST_1_ROW);
+        public ViewConfig<Boolean, TestPlayer, String> config() {
+            return ViewConfig.of(ViewType.CHEST_1_ROW, "Auto");
         }
 
         @Override
-        public void layout(ViewLayout<Boolean, TestPlayer, String> layout, Boolean state, ViewContext<TestPlayer, String> context) {
-            if (state) {
+        public void render(LayoutBuilder<Boolean, TestPlayer, String> layout, ViewContext<Boolean, TestPlayer, String> context) {
+            if (context.state()) {
                 layout.autoUpdating(0, (currentState, currentContext) -> "tick", Duration.ofSeconds(1));
             } else {
                 layout.slot(0, "static");
@@ -268,22 +284,22 @@ class ViewApiCoreTest {
         }
     }
 
-    private record PageState(List<String> items, int page) implements PaginatedView.PaginatedState<String> {
+    private record PageState(List<String> items, int page) implements PaginatedState<String> {
         @Override
-        public PaginatedView.PaginatedState<String> withPage(int page) {
+        public PaginatedState<String> withPage(int page) {
             return new PageState(items, page);
         }
 
         @Override
-        public PaginatedView.PaginatedState<String> withItems(List<String> items) {
+        public PaginatedState<String> withItems(List<String> items) {
             return new PageState(items, page);
         }
     }
 
     private static final class TestPaginatedView extends PaginatedView<String, PageState, TestPlayer, String> {
         @Override
-        public ViewConfiguration<PageState, TestPlayer, String> configuration() {
-            return new ViewConfiguration<>("Pages", ViewType.CHEST_1_ROW);
+        public ViewConfig<PageState, TestPlayer, String> config() {
+            return ViewConfig.of(ViewType.CHEST_1_ROW, "Pages");
         }
 
         @Override
@@ -307,8 +323,7 @@ class ViewApiCoreTest {
         }
 
         @Override
-        protected void onItemClick(ClickContext<PageState, TestPlayer> click, ViewContext<TestPlayer, String> context,
-                                   String item, int index) {
+        protected void onItemClick(ClickContext<PageState, TestPlayer, String> click, String item, int index) {
         }
 
         @Override
@@ -317,17 +332,17 @@ class ViewApiCoreTest {
         }
 
         @Override
-        protected String previousPageItem(int currentPage, int totalPages, ViewContext<TestPlayer, String> context) {
+        protected String previousPageItem(int currentPage, int totalPages, ViewContext<PageState, TestPlayer, String> context) {
             return "prev";
         }
 
         @Override
-        protected String nextPageItem(int currentPage, int totalPages, ViewContext<TestPlayer, String> context) {
+        protected String nextPageItem(int currentPage, int totalPages, ViewContext<PageState, TestPlayer, String> context) {
             return "next";
         }
 
         @Override
-        protected String emptyItem(ViewContext<TestPlayer, String> context) {
+        protected String emptyItem(ViewContext<PageState, TestPlayer, String> context) {
             return TestPlatform.AIR;
         }
     }

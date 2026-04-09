@@ -1,4 +1,4 @@
-package eu.mikart.katso;
+package eu.mikart.katso.platform;
 
 import net.kyori.adventure.text.Component;
 

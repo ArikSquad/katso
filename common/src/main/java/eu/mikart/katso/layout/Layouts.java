@@ -1,4 +1,4 @@
-package eu.mikart.katso;
+package eu.mikart.katso.layout;
 
 import java.util.ArrayList;
 import java.util.List;

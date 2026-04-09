@@ -1,5 +1,6 @@
-package eu.mikart.katso;
+package eu.mikart.katso.platform;
 
+import eu.mikart.katso.view.ViewType;
 import net.kyori.adventure.text.Component;
 
 import java.time.Duration;

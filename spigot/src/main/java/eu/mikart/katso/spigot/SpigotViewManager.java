@@ -1,11 +1,11 @@
 package eu.mikart.katso.spigot;
 
-import eu.mikart.katso.TopClickDecision;
-import eu.mikart.katso.ViewClick;
-import eu.mikart.katso.ViewClickType;
-import eu.mikart.katso.ViewManager;
-import eu.mikart.katso.ViewNavigator;
-import eu.mikart.katso.ViewSession;
+import eu.mikart.katso.context.ViewClick;
+import eu.mikart.katso.context.ViewClickType;
+import eu.mikart.katso.session.TopClickDecision;
+import eu.mikart.katso.session.ViewManager;
+import eu.mikart.katso.session.ViewNavigator;
+import eu.mikart.katso.session.ViewSession;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;

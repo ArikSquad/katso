@@ -1,9 +1,9 @@
 package eu.mikart.katso.minestom;
 
-import eu.mikart.katso.ScheduledTask;
-import eu.mikart.katso.ViewInventory;
-import eu.mikart.katso.ViewPlatform;
-import eu.mikart.katso.ViewType;
+import eu.mikart.katso.platform.ScheduledTask;
+import eu.mikart.katso.platform.ViewInventory;
+import eu.mikart.katso.platform.ViewPlatform;
+import eu.mikart.katso.view.ViewType;
 import net.kyori.adventure.text.Component;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;

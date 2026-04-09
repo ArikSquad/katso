@@ -1,5 +1,14 @@
-package eu.mikart.katso;
+package eu.mikart.katso.session;
 
+import eu.mikart.katso.context.ClickContext;
+import eu.mikart.katso.context.ViewClick;
+import eu.mikart.katso.context.ViewContext;
+import eu.mikart.katso.layout.LayoutBuilder;
+import eu.mikart.katso.layout.SlotBehavior;
+import eu.mikart.katso.layout.ViewComponent;
+import eu.mikart.katso.platform.ScheduledTask;
+import eu.mikart.katso.platform.ViewInventory;
+import eu.mikart.katso.view.View;
 import net.kyori.adventure.text.Component;
 
 import java.time.Duration;
@@ -21,12 +30,12 @@ public final class ViewSession<S, P, I> {
     private final P player;
     private final SharedContext<S, P, I> sharedContext;
     private final ViewInventory<I> inventory;
-    private final ViewContext<P, I> context;
+    private final ViewContext<S, P, I> context;
     private final Map<Integer, ScheduledTask> autoUpdateTasks = new HashMap<>();
     private final Set<ScheduledTask> managedTasks = new HashSet<>();
 
     private S state;
-    private ViewLayout<S, P, I> cachedLayout;
+    private LayoutBuilder<S, P, I> cachedLayout;
     private boolean layoutDirty = true;
     private Consumer<CloseReason> onCloseHandler;
     private boolean closed;
@@ -43,8 +52,7 @@ public final class ViewSession<S, P, I> {
         this.player = Objects.requireNonNull(player, "player");
         this.sharedContext = sharedContext;
         this.state = sharedContext != null ? sharedContext.state() : initialState;
-        this.inventory = manager.platform().createInventory(player, view.configuration().type(),
-                view.configuration().titleFunction().apply(state, temporaryContext()));
+        this.inventory = manager.platform().createInventory(player, view.config().type(), view.config().title(temporaryContext()));
         this.context = new ViewContext<>(manager, navigator, player, inventory, this);
         if (sharedContext != null) {
             sharedContext.registerSession(this);
@@ -67,7 +75,7 @@ public final class ViewSession<S, P, I> {
         return sharedContext;
     }
 
-    public ViewContext<P, I> context() {
+    public ViewContext<S, P, I> context() {
         return context;
     }
 
@@ -82,7 +90,7 @@ public final class ViewSession<S, P, I> {
     void open() {
         render();
         manager.platform().openInventory(player, inventory);
-        view.onOpen(state, context);
+        view.onOpen(context);
     }
 
     public boolean belongsToInventory(Object inventoryHandle) {
@@ -95,7 +103,7 @@ public final class ViewSession<S, P, I> {
         }
 
         if (affectedSlots != null && !affectedSlots.isEmpty()) {
-            if (click.isHotbarSwap() && !cachedLayout.allowHotkey()) {
+            if (click.isHotbarSwap() && !cachedLayout.allowHotbarSwap()) {
                 return TopClickDecision.cancel();
             }
             return affectedSlots.stream().allMatch(cachedLayout::isEditable)
@@ -104,7 +112,7 @@ public final class ViewSession<S, P, I> {
         }
 
         if (cachedLayout.isEditable(slot)) {
-            if (click.isHotbarSwap() && !cachedLayout.allowHotkey()) {
+            if (click.isHotbarSwap() && !cachedLayout.allowHotbarSwap()) {
                 return TopClickDecision.cancel();
             }
             return TopClickDecision.allowEdit();
@@ -118,17 +126,17 @@ public final class ViewSession<S, P, I> {
             return;
         }
 
-        ClickContext<S, P> clickContext = new ClickContext<>(slot, click, player, state);
+        ClickContext<S, P, I> clickContext = new ClickContext<>(slot, click, context);
         ViewComponent<S, P, I> component = cachedLayout.components().get(slot);
         if (component == null) {
-            view.onClick(clickContext, context);
+            view.onClick(clickContext);
             return;
         }
         component.onClick().accept(clickContext, context);
     }
 
     public boolean dispatchBottomClick(int slot, ViewClick click) {
-        return view.onBottomClick(new ClickContext<>(slot, click, player, state), context);
+        return view.onBottomClick(new ClickContext<>(slot, click, context));
     }
 
     public Map<Integer, I> captureEditableSnapshot() {
@@ -188,33 +196,12 @@ public final class ViewSession<S, P, I> {
 
         boolean rebuildLayout = cachedLayout == null || layoutDirty;
         if (rebuildLayout) {
-            cachedLayout = new ViewLayout<>(view.configuration().type());
-            view.layout(cachedLayout, state, context);
-            layoutDirty = false;
+            rebuildLayout();
         }
 
-        Component title = view.configuration().titleFunction().apply(state, context);
-        inventory.setTitle(title);
-
-        Set<Integer> renderedSlots = new HashSet<>();
-        for (Map.Entry<Integer, ViewComponent<S, P, I>> entry : cachedLayout.components().entrySet()) {
-            int slot = entry.getKey();
-            ViewComponent<S, P, I> component = entry.getValue();
-            renderedSlots.add(slot);
-
-            if (component.behavior() == SlotBehavior.EDITABLE) {
-                renderEditableSlot(slot, component);
-            } else {
-                renderSlot(slot, component);
-            }
-        }
-
-        if (rebuildLayout) {
-            clearRemovedSlots(renderedSlots);
-            rescheduleAutoUpdates();
-        }
-
-        view.onRefresh(state, context);
+        renderTitle();
+        renderContents(rebuildLayout);
+        view.onRefresh(context);
     }
 
     public void setState(S newState) {
@@ -275,17 +262,13 @@ public final class ViewSession<S, P, I> {
         }
 
         closed = true;
-
-        autoUpdateTasks.values().forEach(ScheduledTask::cancel);
-        autoUpdateTasks.clear();
-        managedTasks.forEach(ScheduledTask::cancel);
-        managedTasks.clear();
+        cancelManagedTasks();
 
         if (sharedContext != null) {
             sharedContext.unregisterSession(this);
         }
 
-        view.onClose(state, context, reason);
+        view.onClose(context, reason);
         if (onCloseHandler != null) {
             onCloseHandler.accept(reason);
         }
@@ -296,7 +279,45 @@ public final class ViewSession<S, P, I> {
         }
     }
 
-    private ViewContext<P, I> temporaryContext() {
+    private void rebuildLayout() {
+        cachedLayout = new LayoutBuilder<>(view.config().type());
+        view.render(cachedLayout, context);
+        layoutDirty = false;
+    }
+
+    private void renderTitle() {
+        Component title = view.config().title(context);
+        inventory.setTitle(title);
+    }
+
+    private void renderContents(boolean rebuildLayout) {
+        Set<Integer> renderedSlots = new HashSet<>();
+        for (Map.Entry<Integer, ViewComponent<S, P, I>> entry : cachedLayout.components().entrySet()) {
+            int slot = entry.getKey();
+            ViewComponent<S, P, I> component = entry.getValue();
+            renderedSlots.add(slot);
+
+            if (component.behavior() == SlotBehavior.EDITABLE) {
+                renderEditableSlot(slot, component);
+            } else {
+                renderSlot(slot, component);
+            }
+        }
+
+        if (rebuildLayout) {
+            clearRemovedSlots(renderedSlots);
+            rescheduleAutoUpdates();
+        }
+    }
+
+    private void cancelManagedTasks() {
+        autoUpdateTasks.values().forEach(ScheduledTask::cancel);
+        autoUpdateTasks.clear();
+        managedTasks.forEach(ScheduledTask::cancel);
+        managedTasks.clear();
+    }
+
+    private ViewContext<S, P, I> temporaryContext() {
         return new ViewContext<>(manager, navigator, player, null, this);
     }
 
@@ -312,10 +333,7 @@ public final class ViewSession<S, P, I> {
             return;
         }
 
-        I targetItem = component.render().apply(state, context);
-        if (!manager.platform().itemsEqual(inventory.getItem(slot), targetItem)) {
-            inventory.setItem(slot, targetItem);
-        }
+        renderSlot(slot, component);
     }
 
     private void renderSlot(int slot, ViewComponent<S, P, I> component) {
@@ -349,10 +367,9 @@ public final class ViewSession<S, P, I> {
 
             int slot = entry.getKey();
             ScheduledTask task = manager.platform().scheduleRepeating(component.updateInterval(), () -> {
-                if (closed) {
-                    return;
+                if (!closed) {
+                    renderSlot(slot, component);
                 }
-                renderSlot(slot, component);
             });
             autoUpdateTasks.put(slot, task);
         }

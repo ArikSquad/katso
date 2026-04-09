@@ -1,4 +1,4 @@
-package eu.mikart.katso;
+package eu.mikart.katso.context;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;

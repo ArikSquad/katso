@@ -1,4 +1,8 @@
-package eu.mikart.katso;
+package eu.mikart.katso.layout;
+
+import eu.mikart.katso.context.ClickContext;
+import eu.mikart.katso.context.ViewContext;
+import eu.mikart.katso.view.ViewType;
 
 import java.time.Duration;
 import java.util.Collection;
@@ -13,13 +17,13 @@ import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 import java.util.stream.IntStream;
 
-public final class ViewLayout<S, P, I> {
+public final class LayoutBuilder<S, P, I> {
 
     private final Map<Integer, ViewComponent<S, P, I>> components = new HashMap<>();
     private final ViewType type;
-    private boolean allowHotkey;
+    private boolean allowHotbarSwap;
 
-    public ViewLayout(ViewType type) {
+    public LayoutBuilder(ViewType type) {
         this.type = Objects.requireNonNull(type, "type");
     }
 
@@ -31,29 +35,29 @@ public final class ViewLayout<S, P, I> {
         return type;
     }
 
-    public boolean allowHotkey() {
-        return allowHotkey;
+    public boolean allowHotbarSwap() {
+        return allowHotbarSwap;
     }
 
-    public void allowHotkey(boolean allowHotkey) {
-        this.allowHotkey = allowHotkey;
+    public void allowHotbarSwap(boolean allowHotbarSwap) {
+        this.allowHotbarSwap = allowHotbarSwap;
     }
 
     public void slot(
             int slot,
-            BiFunction<S, ViewContext<P, I>, I> render,
-            BiConsumer<ClickContext<S, P>, ViewContext<P, I>> onClick
+            BiFunction<S, ViewContext<S, P, I>, I> render,
+            BiConsumer<ClickContext<S, P, I>, ViewContext<S, P, I>> onClick
     ) {
         validateSlot(slot);
         components.put(slot, new ViewComponent<>(slot, render, onClick));
     }
 
-    public void slot(int slot, BiFunction<S, ViewContext<P, I>, I> render) {
+    public void slot(int slot, BiFunction<S, ViewContext<S, P, I>, I> render) {
         slot(slot, render, (click, context) -> {
         });
     }
 
-    public void slot(int slot, I item, BiConsumer<ClickContext<S, P>, ViewContext<P, I>> onClick) {
+    public void slot(int slot, I item, BiConsumer<ClickContext<S, P, I>, ViewContext<S, P, I>> onClick) {
         validateSlot(slot);
         components.put(slot, new ViewComponent<>(slot, (state, context) -> item, onClick));
     }
@@ -61,7 +65,7 @@ public final class ViewLayout<S, P, I> {
     public void slot(int slot, I item, UnaryOperator<S> stateUpdater) {
         validateSlot(slot);
         components.put(slot, new ViewComponent<>(slot, (state, context) -> item,
-                (click, context) -> context.<S>session().update(stateUpdater)));
+                (click, context) -> context.session().update(stateUpdater)));
     }
 
     public void slot(int slot, I item) {
@@ -70,16 +74,16 @@ public final class ViewLayout<S, P, I> {
     }
 
     public void slots(Collection<Integer> slots,
-                      BiFunction<S, ViewContext<P, I>, I> render,
-                      BiConsumer<ClickContext<S, P>, ViewContext<P, I>> onClick) {
+                      BiFunction<S, ViewContext<S, P, I>, I> render,
+                      BiConsumer<ClickContext<S, P, I>, ViewContext<S, P, I>> onClick) {
         slots.forEach(slot -> slot(slot, render, onClick));
     }
 
-    public void slots(Collection<Integer> slots, BiFunction<S, ViewContext<P, I>, I> render) {
+    public void slots(Collection<Integer> slots, BiFunction<S, ViewContext<S, P, I>, I> render) {
         slots.forEach(slot -> slot(slot, render));
     }
 
-    public void editable(int slot, BiFunction<S, ViewContext<P, I>, I> render, SlotChangeHandler<S, I> onChange) {
+    public void editable(int slot, BiFunction<S, ViewContext<S, P, I>, I> render, SlotChangeHandler<S, I> onChange) {
         validateSlot(slot);
         components.put(slot, ViewComponent.editable(slot, render, onChange));
     }
@@ -101,6 +105,10 @@ public final class ViewLayout<S, P, I> {
                 null));
     }
 
+    public void editable(int slot, SlotChangeHandler<S, I> onChange) {
+        editable(slot, (state, context) -> context.manager().platform().emptyItem(), onChange);
+    }
+
     public void editableSlots(Collection<Integer> slots, SlotChangeHandler<S, I> onChange) {
         slots.forEach(slot -> editable(slot, onChange));
     }
@@ -109,22 +117,18 @@ public final class ViewLayout<S, P, I> {
         slots.forEach(this::editable);
     }
 
-    public void editable(int slot, SlotChangeHandler<S, I> onChange) {
-        editable(slot, (state, context) -> context.manager().platform().emptyItem(), onChange);
-    }
-
     public void editableGrid(int startSlot, int endSlot, SlotChangeHandler<S, I> onChange) {
         editableSlots(Layouts.rectangle(startSlot, endSlot), onChange);
     }
 
-    public void autoUpdating(int slot, BiFunction<S, ViewContext<P, I>, I> render, Duration updateInterval) {
+    public void autoUpdating(int slot, BiFunction<S, ViewContext<S, P, I>, I> render, Duration updateInterval) {
         validateSlot(slot);
         components.put(slot, ViewComponent.autoUpdating(slot, render, updateInterval));
     }
 
     public void autoUpdating(int slot,
-                             BiFunction<S, ViewContext<P, I>, I> render,
-                             BiConsumer<ClickContext<S, P>, ViewContext<P, I>> onClick,
+                             BiFunction<S, ViewContext<S, P, I>, I> render,
+                             BiConsumer<ClickContext<S, P, I>, ViewContext<S, P, I>> onClick,
                              Duration updateInterval) {
         validateSlot(slot);
         components.put(slot, ViewComponent.autoUpdating(slot, render, onClick, updateInterval));
@@ -137,7 +141,7 @@ public final class ViewLayout<S, P, I> {
         });
     }
 
-    public void filler(Collection<Integer> slots, BiFunction<S, ViewContext<P, I>, I> render) {
+    public void filler(Collection<Integer> slots, BiFunction<S, ViewContext<S, P, I>, I> render) {
         slots.forEach(slot -> {
             validateSlot(slot);
             components.put(slot, new ViewComponent<>(slot, render, (click, context) -> {
@@ -149,13 +153,13 @@ public final class ViewLayout<S, P, I> {
         IntStream.range(0, type.size()).forEach(slot -> components.put(slot, ViewComponent.staticItem(slot, item)));
     }
 
-    public SlotBehavior getBehavior(int slot) {
+    public SlotBehavior behaviorAt(int slot) {
         ViewComponent<S, P, I> component = components.get(slot);
         return component != null ? component.behavior() : SlotBehavior.NO_RENDER;
     }
 
     public boolean isEditable(int slot) {
-        return getBehavior(slot) == SlotBehavior.EDITABLE;
+        return behaviorAt(slot) == SlotBehavior.EDITABLE;
     }
 
     public Set<Integer> editableSlots() {

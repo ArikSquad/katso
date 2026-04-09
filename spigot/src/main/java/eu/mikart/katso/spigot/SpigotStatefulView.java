@@ -1,6 +1,6 @@
 package eu.mikart.katso.spigot;
 
-import eu.mikart.katso.StatefulView;
+import eu.mikart.katso.view.StatefulView;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 

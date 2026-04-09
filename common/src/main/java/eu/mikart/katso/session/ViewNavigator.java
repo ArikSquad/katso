@@ -1,4 +1,7 @@
-package eu.mikart.katso;
+package eu.mikart.katso.session;
+
+import eu.mikart.katso.view.StatefulView;
+import eu.mikart.katso.view.View;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
