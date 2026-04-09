@@ -10,6 +10,7 @@ import eu.mikart.katso.platform.ViewInventory;
 import eu.mikart.katso.platform.ViewPlatform;
 import eu.mikart.katso.session.SharedContext;
 import eu.mikart.katso.session.ViewManager;
+import eu.mikart.katso.session.ViewNavigator;
 import eu.mikart.katso.session.ViewSession;
 import eu.mikart.katso.context.ViewContext;
 import eu.mikart.katso.view.StatefulView;
@@ -103,6 +104,22 @@ class ViewApiCoreTest {
         session.setState(false);
 
         assertEquals(0, platform.activeRepeatingTasks());
+    }
+
+    @Test
+    void sharedSessionRestoresLocalQuietStateWhenPoppedFromStack() {
+        TestPlatform platform = new TestPlatform();
+        ViewManager<TestPlayer, String> manager = new ViewManager<>(platform);
+        SharedContext<String, TestPlayer, String> shared = manager.createSharedContext("shared-nav", "shared");
+        ViewNavigator<TestPlayer, String> navigator = manager.navigator(new TestPlayer());
+
+        ViewSession<String, TestPlayer, String> sharedSession = navigator.pushShared(new LabelView("Shared"), shared);
+        sharedSession.setStateQuiet("local-page");
+
+        navigator.push(new LabelView("Other"), "other");
+
+        assertTrue(navigator.pop());
+        assertEquals("local-page", navigator.currentSession().state());
     }
 
     private record TestPlayer(UUID id) {
@@ -247,6 +264,24 @@ class ViewApiCoreTest {
         public void render(LayoutBuilder<String, TestPlayer, String> layout, ViewContext<String, TestPlayer, String> context) {
             layout.editable(0);
             layout.allowHotbarSwap(allowHotkey);
+        }
+    }
+
+    private static final class LabelView implements View<String, TestPlayer, String> {
+        private final String title;
+
+        private LabelView(String title) {
+            this.title = title;
+        }
+
+        @Override
+        public ViewConfig<String, TestPlayer, String> config() {
+            return ViewConfig.of(ViewType.CHEST_1_ROW, title);
+        }
+
+        @Override
+        public void render(LayoutBuilder<String, TestPlayer, String> layout, ViewContext<String, TestPlayer, String> context) {
+            layout.slot(0, context.state());
         }
     }
 

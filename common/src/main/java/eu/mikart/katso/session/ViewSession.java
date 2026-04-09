@@ -9,6 +9,7 @@ import eu.mikart.katso.layout.ViewComponent;
 import eu.mikart.katso.platform.ScheduledTask;
 import eu.mikart.katso.platform.ViewInventory;
 import eu.mikart.katso.view.View;
+import eu.mikart.katso.view.ViewConfig;
 import net.kyori.adventure.text.Component;
 
 import java.time.Duration;
@@ -27,6 +28,7 @@ public final class ViewSession<S, P, I> {
     private final ViewManager<P, I> manager;
     private final ViewNavigator<P, I> navigator;
     private final View<S, P, I> view;
+    private final ViewConfig<S, P, I> config;
     private final P player;
     private final SharedContext<S, P, I> sharedContext;
     private final ViewInventory<I> inventory;
@@ -49,10 +51,11 @@ public final class ViewSession<S, P, I> {
         this.manager = Objects.requireNonNull(manager, "manager");
         this.navigator = Objects.requireNonNull(navigator, "navigator");
         this.view = Objects.requireNonNull(view, "view");
+        this.config = view.config();
         this.player = Objects.requireNonNull(player, "player");
         this.sharedContext = sharedContext;
-        this.state = sharedContext != null ? sharedContext.state() : initialState;
-        this.inventory = manager.platform().createInventory(player, view.config().type(), view.config().title(temporaryContext()));
+        this.state = initialState;
+        this.inventory = manager.platform().createInventory(player, config.type(), config.title(temporaryContext()));
         this.context = new ViewContext<>(manager, navigator, player, inventory, this);
         if (sharedContext != null) {
             sharedContext.registerSession(this);
@@ -280,22 +283,24 @@ public final class ViewSession<S, P, I> {
     }
 
     private void rebuildLayout() {
-        cachedLayout = new LayoutBuilder<>(view.config().type());
+        cachedLayout = new LayoutBuilder<>(config.type());
         view.render(cachedLayout, context);
         layoutDirty = false;
     }
 
     private void renderTitle() {
-        Component title = view.config().title(context);
+        Component title = config.title(context);
         inventory.setTitle(title);
     }
 
     private void renderContents(boolean rebuildLayout) {
-        Set<Integer> renderedSlots = new HashSet<>();
+        Set<Integer> renderedSlots = rebuildLayout ? new HashSet<>(cachedLayout.components().size()) : null;
         for (Map.Entry<Integer, ViewComponent<S, P, I>> entry : cachedLayout.components().entrySet()) {
             int slot = entry.getKey();
             ViewComponent<S, P, I> component = entry.getValue();
-            renderedSlots.add(slot);
+            if (renderedSlots != null) {
+                renderedSlots.add(slot);
+            }
 
             if (component.behavior() == SlotBehavior.EDITABLE) {
                 renderEditableSlot(slot, component);
@@ -305,7 +310,7 @@ public final class ViewSession<S, P, I> {
         }
 
         if (rebuildLayout) {
-            clearRemovedSlots(renderedSlots);
+            clearRemovedSlots(Objects.requireNonNull(renderedSlots));
             rescheduleAutoUpdates();
         }
     }
@@ -344,11 +349,11 @@ public final class ViewSession<S, P, I> {
     }
 
     private void clearRemovedSlots(Set<Integer> renderedSlots) {
+        I emptyItem = manager.platform().emptyItem();
         for (int slot = 0; slot < inventory.size(); slot++) {
             if (renderedSlots.contains(slot)) {
                 continue;
             }
-            I emptyItem = manager.platform().emptyItem();
             if (!manager.platform().itemsEqual(inventory.getItem(slot), emptyItem)) {
                 inventory.setItem(slot, emptyItem);
             }

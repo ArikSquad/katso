@@ -20,6 +20,9 @@ import java.util.stream.IntStream;
 public final class LayoutBuilder<S, P, I> {
 
     private final Map<Integer, ViewComponent<S, P, I>> components = new HashMap<>();
+    private final Map<Integer, ViewComponent<S, P, I>> componentsView = Collections.unmodifiableMap(components);
+    private final Set<Integer> editableSlots = new HashSet<>();
+    private final Set<Integer> editableSlotsView = Collections.unmodifiableSet(editableSlots);
     private final ViewType type;
     private boolean allowHotbarSwap;
 
@@ -28,7 +31,7 @@ public final class LayoutBuilder<S, P, I> {
     }
 
     public Map<Integer, ViewComponent<S, P, I>> components() {
-        return Collections.unmodifiableMap(components);
+        return componentsView;
     }
 
     public ViewType type() {
@@ -49,7 +52,7 @@ public final class LayoutBuilder<S, P, I> {
             BiConsumer<ClickContext<S, P, I>, ViewContext<S, P, I>> onClick
     ) {
         validateSlot(slot);
-        components.put(slot, new ViewComponent<>(slot, render, onClick));
+        putComponent(slot, new ViewComponent<>(slot, render, onClick));
     }
 
     public void slot(int slot, BiFunction<S, ViewContext<S, P, I>, I> render) {
@@ -59,18 +62,18 @@ public final class LayoutBuilder<S, P, I> {
 
     public void slot(int slot, I item, BiConsumer<ClickContext<S, P, I>, ViewContext<S, P, I>> onClick) {
         validateSlot(slot);
-        components.put(slot, new ViewComponent<>(slot, (state, context) -> item, onClick));
+        putComponent(slot, new ViewComponent<>(slot, (state, context) -> item, onClick));
     }
 
     public void slot(int slot, I item, UnaryOperator<S> stateUpdater) {
         validateSlot(slot);
-        components.put(slot, new ViewComponent<>(slot, (state, context) -> item,
+        putComponent(slot, new ViewComponent<>(slot, (state, context) -> item,
                 (click, context) -> context.session().update(stateUpdater)));
     }
 
     public void slot(int slot, I item) {
         validateSlot(slot);
-        components.put(slot, ViewComponent.staticItem(slot, item));
+        putComponent(slot, ViewComponent.staticItem(slot, item));
     }
 
     public void slots(Collection<Integer> slots,
@@ -85,17 +88,17 @@ public final class LayoutBuilder<S, P, I> {
 
     public void editable(int slot, BiFunction<S, ViewContext<S, P, I>, I> render, SlotChangeHandler<S, I> onChange) {
         validateSlot(slot);
-        components.put(slot, ViewComponent.editable(slot, render, onChange));
+        putComponent(slot, ViewComponent.editable(slot, render, onChange));
     }
 
     public void editable(int slot, I item, SlotChangeHandler<S, I> onChange) {
         validateSlot(slot);
-        components.put(slot, ViewComponent.editable(slot, item, onChange));
+        putComponent(slot, ViewComponent.editable(slot, item, onChange));
     }
 
     public void editable(int slot) {
         validateSlot(slot);
-        components.put(slot, new ViewComponent<>(slot,
+        putComponent(slot, new ViewComponent<>(slot,
                 (state, context) -> context.manager().platform().emptyItem(),
                 (click, context) -> {
                 },
@@ -123,7 +126,7 @@ public final class LayoutBuilder<S, P, I> {
 
     public void autoUpdating(int slot, BiFunction<S, ViewContext<S, P, I>, I> render, Duration updateInterval) {
         validateSlot(slot);
-        components.put(slot, ViewComponent.autoUpdating(slot, render, updateInterval));
+        putComponent(slot, ViewComponent.autoUpdating(slot, render, updateInterval));
     }
 
     public void autoUpdating(int slot,
@@ -131,26 +134,26 @@ public final class LayoutBuilder<S, P, I> {
                              BiConsumer<ClickContext<S, P, I>, ViewContext<S, P, I>> onClick,
                              Duration updateInterval) {
         validateSlot(slot);
-        components.put(slot, ViewComponent.autoUpdating(slot, render, onClick, updateInterval));
+        putComponent(slot, ViewComponent.autoUpdating(slot, render, onClick, updateInterval));
     }
 
     public void filler(Collection<Integer> slots, I item) {
         slots.forEach(slot -> {
             validateSlot(slot);
-            components.put(slot, ViewComponent.staticItem(slot, item));
+            putComponent(slot, ViewComponent.staticItem(slot, item));
         });
     }
 
     public void filler(Collection<Integer> slots, BiFunction<S, ViewContext<S, P, I>, I> render) {
         slots.forEach(slot -> {
             validateSlot(slot);
-            components.put(slot, new ViewComponent<>(slot, render, (click, context) -> {
+            putComponent(slot, new ViewComponent<>(slot, render, (click, context) -> {
             }));
         });
     }
 
     public void filler(I item) {
-        IntStream.range(0, type.size()).forEach(slot -> components.put(slot, ViewComponent.staticItem(slot, item)));
+        IntStream.range(0, type.size()).forEach(slot -> putComponent(slot, ViewComponent.staticItem(slot, item)));
     }
 
     public SlotBehavior behaviorAt(int slot) {
@@ -163,18 +166,21 @@ public final class LayoutBuilder<S, P, I> {
     }
 
     public Set<Integer> editableSlots() {
-        Set<Integer> editable = new HashSet<>();
-        components.forEach((slot, component) -> {
-            if (component.behavior() == SlotBehavior.EDITABLE) {
-                editable.add(slot);
-            }
-        });
-        return editable;
+        return editableSlotsView;
     }
 
     private void validateSlot(int slot) {
         if (slot < 0 || slot >= type.size()) {
             throw new IllegalArgumentException("Slot " + slot + " is outside inventory size " + type.size());
         }
+    }
+
+    private void putComponent(int slot, ViewComponent<S, P, I> component) {
+        components.put(slot, component);
+        if (component.behavior() == SlotBehavior.EDITABLE) {
+            editableSlots.add(slot);
+            return;
+        }
+        editableSlots.remove(slot);
     }
 }

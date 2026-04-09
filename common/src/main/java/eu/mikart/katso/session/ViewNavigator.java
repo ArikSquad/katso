@@ -97,6 +97,9 @@ public final class ViewNavigator<P, I> {
     }
 
     public void popTo(int levels) {
+        if (levels <= 0) {
+            return;
+        }
         for (int index = 0; index < levels - 1 && !stack.isEmpty(); index++) {
             stack.pop();
         }

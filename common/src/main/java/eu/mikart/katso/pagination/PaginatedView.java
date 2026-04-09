@@ -66,7 +66,7 @@ public abstract class PaginatedView<T, S extends PaginatedState<T>, P, I> implem
                 layout.slot(previousPageSlot,
                         (currentState, currentContext) -> previousPageItem(currentPage, totalPages, currentContext),
                         (click, currentContext) -> currentContext.session()
-                                .setStateQuiet(castState(context.state().withPage(currentPage - 1))));
+                                .setStateQuiet(castState(currentContext.state().withPage(currentPage - 1))));
             } else {
                 layout.slot(previousPageSlot, (currentState, currentContext) -> emptyItem(currentContext));
             }
@@ -77,7 +77,7 @@ public abstract class PaginatedView<T, S extends PaginatedState<T>, P, I> implem
                 layout.slot(nextPageSlot,
                         (currentState, currentContext) -> nextPageItem(currentPage, totalPages, currentContext),
                         (click, currentContext) -> currentContext.session()
-                                .setStateQuiet(castState(context.state().withPage(currentPage + 1))));
+                                .setStateQuiet(castState(currentContext.state().withPage(currentPage + 1))));
             } else {
                 layout.slot(nextPageSlot, (currentState, currentContext) -> emptyItem(currentContext));
             }
