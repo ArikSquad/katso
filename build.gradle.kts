@@ -8,7 +8,10 @@ version = "0.1.0-SNAPSHOT"
 allprojects {
     repositories {
         mavenCentral()
+        maven("https://repo.codemc.io/repository/maven-releases/")
+        maven("https://maven.fabricmc.net/")
         maven("https://repo.papermc.io/repository/maven-public/")
+        maven("https://repo.spongepowered.org/maven/")
         maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
     }
 }

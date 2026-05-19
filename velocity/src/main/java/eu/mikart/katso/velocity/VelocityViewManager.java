@@ -1,10 +1,16 @@
 package eu.mikart.katso.velocity;
 
+import com.velocitypowered.api.proxy.Player;
 import eu.mikart.katso.packetevents.PacketEventsViewManager;
 
-public class VelocityViewManager<P, I> extends PacketEventsViewManager<P, I> {
+public class VelocityViewManager<I> extends PacketEventsViewManager<Player, I> {
 
-    public VelocityViewManager(VelocityViewPlatform<P, I> platform) {
+    public VelocityViewManager(VelocityViewPlatform<I> platform) {
         super(platform);
+    }
+
+    @Override
+    public VelocityViewPlatform<I> platform() {
+        return (VelocityViewPlatform<I>) super.platform();
     }
 }

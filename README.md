@@ -70,6 +70,8 @@ viewManager.navigator(player).push(new CounterView());
 - **Velocity** support is intentionally PacketEvents-first because Velocity itself does not provide an inventory GUI API.
 - **Fabric** support is exposed via a PacketEvents-backed manager design intended for multi-version integrations (including 1.21.11/26.1.2 environments).
 - **Sponge** support is exposed via a dedicated platform interface and manager.
+- Each platform module now also exposes the same typed view surface as the established adapters: `*View`, `*StatefulView`,
+  `*StatelessView`, `*PaginatedView`, and `*StatefulPaginatedView`.
 
 
 ### PacketEvents integration flow

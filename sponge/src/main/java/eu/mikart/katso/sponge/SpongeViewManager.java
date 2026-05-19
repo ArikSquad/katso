@@ -5,18 +5,25 @@ import eu.mikart.katso.session.TopClickDecision;
 import eu.mikart.katso.session.ViewManager;
 import eu.mikart.katso.session.ViewNavigator;
 import eu.mikart.katso.session.ViewSession;
+import org.spongepowered.api.entity.living.player.server.ServerPlayer;
+import org.spongepowered.api.item.inventory.ItemStackSnapshot;
 
 import java.util.List;
 import java.util.Map;
 
-public class SpongeViewManager<P, I> extends ViewManager<P, I> {
+public class SpongeViewManager extends ViewManager<ServerPlayer, ItemStackSnapshot> {
 
-    public SpongeViewManager(SpongeViewPlatform<P, I> platform) {
+    public SpongeViewManager(SpongeViewPlatform platform) {
         super(platform);
     }
 
-    public boolean onTopClick(P player, Object inventoryHandle, int slot, ViewClick click) {
-        ViewSession<?, P, I> session = currentSession(player);
+    @Override
+    public SpongeViewPlatform platform() {
+        return (SpongeViewPlatform) super.platform();
+    }
+
+    public boolean onTopClick(ServerPlayer player, Object inventoryHandle, int slot, ViewClick click) {
+        ViewSession<?, ServerPlayer, ItemStackSnapshot> session = currentSession(player);
         if (session == null || !session.belongsToInventory(inventoryHandle)) {
             return true;
         }
@@ -33,8 +40,8 @@ public class SpongeViewManager<P, I> extends ViewManager<P, I> {
         return true;
     }
 
-    public boolean onTopDrag(P player, Object inventoryHandle, List<Integer> topSlots, ViewClick dragClick) {
-        ViewSession<?, P, I> session = currentSession(player);
+    public boolean onTopDrag(ServerPlayer player, Object inventoryHandle, List<Integer> topSlots, ViewClick dragClick) {
+        ViewSession<?, ServerPlayer, ItemStackSnapshot> session = currentSession(player);
         if (session == null || !session.belongsToInventory(inventoryHandle) || topSlots.isEmpty()) {
             return true;
         }
@@ -48,8 +55,8 @@ public class SpongeViewManager<P, I> extends ViewManager<P, I> {
         return true;
     }
 
-    public boolean onBottomClick(P player, Object topInventoryHandle, int slot, ViewClick click) {
-        ViewSession<?, P, I> session = currentSession(player);
+    public boolean onBottomClick(ServerPlayer player, Object topInventoryHandle, int slot, ViewClick click) {
+        ViewSession<?, ServerPlayer, ItemStackSnapshot> session = currentSession(player);
         if (session == null || !session.belongsToInventory(topInventoryHandle)) {
             return true;
         }
@@ -62,23 +69,23 @@ public class SpongeViewManager<P, I> extends ViewManager<P, I> {
         return true;
     }
 
-    public void onInventoryClosedByPlayer(P player, Object inventoryHandle) {
-        ViewSession<?, P, I> session = currentSession(player);
+    public void onInventoryClosedByPlayer(ServerPlayer player, Object inventoryHandle) {
+        ViewSession<?, ServerPlayer, ItemStackSnapshot> session = currentSession(player);
         if (session != null && session.belongsToInventory(inventoryHandle)) {
             session.close(ViewSession.CloseReason.PLAYER_EXITED);
         }
     }
 
-    public void onPlayerDisconnected(P player) {
+    public void onPlayerDisconnected(ServerPlayer player) {
         removeNavigator(player);
     }
 
-    protected ViewSession<?, P, I> currentSession(P player) {
+    protected ViewSession<?, ServerPlayer, ItemStackSnapshot> currentSession(ServerPlayer player) {
         return findNavigator(player).map(ViewNavigator::currentSession).orElse(null);
     }
 
-    protected void scheduleEditableSnapshot(ViewSession<?, P, I> session) {
-        Map<Integer, I> snapshot = session.captureEditableSnapshot();
+    protected void scheduleEditableSnapshot(ViewSession<?, ServerPlayer, ItemStackSnapshot> session) {
+        Map<Integer, ItemStackSnapshot> snapshot = session.captureEditableSnapshot();
         if (snapshot.isEmpty()) {
             return;
         }
