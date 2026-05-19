@@ -9,6 +9,10 @@ small common core, thin platform adapters, and a typed view API that favors clea
 - `spigot`: Spigot inventory/event adapter.
 - `paper`: Paper convenience wrappers on top of the Spigot adapter.
 - `minestom`: Minestom inventory/event adapter.
+- `packetevents`: Platform-agnostic click/drag/close lifecycle manager for packet-level integrations.
+- `velocity`: Velocity adapter built on the PacketEvents module.
+- `fabric`: Fabric adapter built on the PacketEvents module.
+- `sponge`: Sponge adapter entrypoint.
 
 ## Design Goals
 
@@ -60,6 +64,23 @@ Open views through the platform manager:
 PaperViewManager viewManager = new PaperViewManager(plugin);
 viewManager.navigator(player).push(new CounterView());
 ```
+
+## Platform Notes
+
+- **Velocity** support is intentionally PacketEvents-first because Velocity itself does not provide an inventory GUI API.
+- **Fabric** support is exposed via a PacketEvents-backed manager design intended for multi-version integrations (including 1.21.11/26.1.2 environments).
+- **Sponge** support is exposed via a dedicated platform interface and manager.
+
+
+### PacketEvents integration flow
+
+For Velocity/Fabric (and any other packet-first platform), wire your packet listeners to `PacketEventsEventBridge`:
+
+1. Construct a `PacketEventsViewManager` platform adapter (or `VelocityViewManager` / `FabricViewManager`).
+2. Implement a `PacketEventsClickMapper` that maps protocol click types to `ViewClick`.
+3. Forward packet callbacks to `topClick`, `topDrag`, `bottomClick`, `close`, and `disconnect`.
+
+The bridge returns `ALLOW`/`CANCEL` to make packet cancellation straightforward in host plugins.
 
 ## Compatibility
 
