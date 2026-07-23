@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,6 +75,24 @@ class ViewApiCoreTest {
         assertEquals(TestPlatform.AIR, oversizedPage.inventory().getItem(1));
     }
 
+
+    @Test
+    void textInputChangesDispatchToView() {
+        TestPlatform platform = new TestPlatform();
+        ViewManager<TestPlayer, String> manager = new ViewManager<>(platform);
+        TextInputView view = new TextInputView();
+
+        ViewSession<String, TestPlayer, String> session = manager.navigator(new TestPlayer())
+                .push(view, "");
+
+        platform.textInput = "diamond";
+        session.pollTextInput();
+        session.pollTextInput();
+
+        assertEquals("diamond", session.state());
+        assertEquals(1, view.inputChanges);
+    }
+
     @Test
     void sharedContextClearDoesNotReinitializeEditableDefaults() {
         TestPlatform platform = new TestPlatform();
@@ -115,6 +134,7 @@ class ViewApiCoreTest {
         private static final String AIR = "<air>";
 
         private final List<TestTask> repeatingTasks = new ArrayList<>();
+        private String textInput;
 
         @Override
         public UUID playerId(TestPlayer player) {
@@ -159,6 +179,11 @@ class ViewApiCoreTest {
                 return true;
             }
             return Objects.equals(first, second);
+        }
+
+        @Override
+        public Optional<String> readTextInput(TestPlayer player, ViewInventory<String> inventory) {
+            return Optional.ofNullable(textInput);
         }
 
         @Override
@@ -228,6 +253,27 @@ class ViewApiCoreTest {
         @Override
         public Object handle() {
             return this;
+        }
+    }
+
+
+    private static final class TextInputView implements View<String, TestPlayer, String> {
+        private int inputChanges;
+
+        @Override
+        public ViewConfig<String, TestPlayer, String> config() {
+            return ViewConfig.of(ViewType.ANVIL, "Search");
+        }
+
+        @Override
+        public void render(LayoutBuilder<String, TestPlayer, String> layout, ViewContext<String, TestPlayer, String> context) {
+            layout.editable(0);
+        }
+
+        @Override
+        public void onTextInput(ViewContext<String, TestPlayer, String> context, String text) {
+            inputChanges++;
+            context.session().setState(text);
         }
     }
 

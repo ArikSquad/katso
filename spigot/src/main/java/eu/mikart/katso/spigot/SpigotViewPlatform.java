@@ -14,7 +14,9 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
+import java.lang.reflect.Method;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 public class SpigotViewPlatform implements ViewPlatform<Player, ItemStack> {
@@ -34,13 +36,9 @@ public class SpigotViewPlatform implements ViewPlatform<Player, ItemStack> {
 
     @Override
     public ViewInventory<ItemStack> createInventory(Player player, ViewType type, Component title) {
-        Inventory inventory = switch (type.kind()) {
-            case CHEST -> Bukkit.createInventory(null, type.size(), componentBridge.serializeTitle(title));
-            case HOPPER -> Bukkit.createInventory(null, org.bukkit.event.inventory.InventoryType.HOPPER,
-                    componentBridge.serializeTitle(title));
-            case DISPENSER -> Bukkit.createInventory(null, org.bukkit.event.inventory.InventoryType.DISPENSER,
-                    componentBridge.serializeTitle(title));
-        };
+        Inventory inventory = type.kind() == eu.mikart.katso.view.MenuKind.CHEST
+                ? Bukkit.createInventory(null, type.size(), componentBridge.serializeTitle(title))
+                : Bukkit.createInventory(null, bukkitType(type), componentBridge.serializeTitle(title));
         return new SpigotInventory(player, inventory);
     }
 
@@ -57,6 +55,46 @@ public class SpigotViewPlatform implements ViewPlatform<Player, ItemStack> {
     @Override
     public void sendMessage(Player player, Component message) {
         componentBridge.sendMessage(player, message);
+    }
+
+    @Override
+    public Optional<String> readTextInput(Player player, ViewInventory<ItemStack> inventory) {
+        if (!(((Inventory) inventory.handle()) instanceof org.bukkit.inventory.AnvilInventory anvil)) {
+            return Optional.empty();
+        }
+        try {
+            Method method = anvil.getClass().getMethod("getRenameText");
+            Object value = method.invoke(anvil);
+            return value instanceof String text ? Optional.of(text) : Optional.empty();
+        } catch (ReflectiveOperationException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private org.bukkit.event.inventory.InventoryType bukkitType(ViewType type) {
+        String[] names = switch (type.kind()) {
+            case HOPPER -> new String[]{"HOPPER"};
+            case DISPENSER -> new String[]{"DISPENSER"};
+            case DROPPER -> new String[]{"DROPPER", "DISPENSER"};
+            case ANVIL -> new String[]{"ANVIL"};
+            case FURNACE -> new String[]{"FURNACE"};
+            case BLAST_FURNACE -> new String[]{"BLAST_FURNACE"};
+            case SMOKER -> new String[]{"SMOKER"};
+            case BREWING_STAND -> new String[]{"BREWING"};
+            case ENCHANTING_TABLE -> new String[]{"ENCHANTING"};
+            case CRAFTING_TABLE -> new String[]{"WORKBENCH"};
+            case CARTOGRAPHY_TABLE -> new String[]{"CARTOGRAPHY"};
+            case GRINDSTONE -> new String[]{"GRINDSTONE"};
+            case LOOM -> new String[]{"LOOM"};
+            case STONECUTTER -> new String[]{"STONECUTTER"};
+            case SMITHING_TABLE -> new String[]{"SMITHING", "SMITHING_NEW"};
+            case BEACON -> new String[]{"BEACON"};
+            case CHEST -> throw new IllegalArgumentException("Chest menus are created by size");
+        };
+        for (String name : names) {
+            try { return org.bukkit.event.inventory.InventoryType.valueOf(name); } catch (IllegalArgumentException ignored) { }
+        }
+        throw new IllegalArgumentException("Bukkit does not expose an inventory type for " + type.kind());
     }
 
     @Override

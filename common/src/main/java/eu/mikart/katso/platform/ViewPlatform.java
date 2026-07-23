@@ -4,6 +4,7 @@ import eu.mikart.katso.view.ViewType;
 import net.kyori.adventure.text.Component;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ViewPlatform<P, I> {
@@ -25,6 +26,10 @@ public interface ViewPlatform<P, I> {
     boolean isEmpty(I item);
 
     boolean itemsEqual(I first, I second);
+
+    default Optional<String> readTextInput(P player, ViewInventory<I> inventory) {
+        return Optional.empty();
+    }
 
     ScheduledTask scheduleNextTick(Runnable action);
 

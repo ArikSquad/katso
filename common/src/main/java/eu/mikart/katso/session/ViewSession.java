@@ -39,6 +39,7 @@ public final class ViewSession<S, P, I> {
     private boolean layoutDirty = true;
     private Consumer<CloseReason> onCloseHandler;
     private boolean closed;
+    private String lastTextInput;
 
     ViewSession(ViewManager<P, I> manager,
                 ViewNavigator<P, I> navigator,
@@ -90,6 +91,7 @@ public final class ViewSession<S, P, I> {
     void open() {
         render();
         manager.platform().openInventory(player, inventory);
+        captureTextInput();
         view.onOpen(context);
     }
 
@@ -182,6 +184,20 @@ public final class ViewSession<S, P, I> {
         }
 
         render();
+    }
+
+    public void pollTextInput() {
+        manager.platform().readTextInput(player, inventory).ifPresent(text -> {
+            if (Objects.equals(lastTextInput, text)) {
+                return;
+            }
+            lastTextInput = text;
+            view.onTextInput(context, text);
+        });
+    }
+
+    public String lastTextInput() {
+        return lastTextInput;
     }
 
     public void refresh() {
@@ -277,6 +293,10 @@ public final class ViewSession<S, P, I> {
         if (reason == CloseReason.SERVER_EXITED) {
             manager.platform().closeInventory(player);
         }
+    }
+
+    private void captureTextInput() {
+        manager.platform().readTextInput(player, inventory).ifPresent(text -> lastTextInput = text);
     }
 
     private void rebuildLayout() {

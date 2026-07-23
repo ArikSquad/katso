@@ -17,6 +17,10 @@ small common core, thin platform adapters, and a typed view API that favors clea
 - Small platform modules that adapt the common engine instead of reimplementing it.
 - Breaking changes are acceptable when they improve the API or internal design.
 
+## API Guide
+
+See [docs-api.md](docs-api.md) for the current API guide, including cleaner configuration helpers, fixed-size menus, anvil text input/search bars, editable slots, navigation, and shared menu examples.
+
 ## Quick Example
 
 ```java
@@ -24,7 +28,7 @@ import eu.mikart.katso.context.ViewContext;
 import eu.mikart.katso.layout.LayoutBuilder;
 import eu.mikart.katso.paper.PaperStatefulView;
 import eu.mikart.katso.view.ViewConfig;
-import eu.mikart.katso.view.ViewType;
+import eu.mikart.katso.view.MenuTypes;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -39,7 +43,7 @@ public final class CounterView implements PaperStatefulView<Integer> {
 
     @Override
     public ViewConfig<Integer, Player, ItemStack> config() {
-        return ViewConfig.<Integer, Player, ItemStack>builder(ViewType.CHEST_3_ROW)
+        return ViewConfig.<Integer, Player, ItemStack>builder(MenuTypes.CHEST_3_ROW)
                 .title(context -> Component.text("Count: " + context.state()))
                 .build();
     }

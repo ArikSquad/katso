@@ -76,11 +76,13 @@ public class MinestomViewManager extends ViewManager<Player, ItemStack> {
         }
 
         Map<Integer, ItemStack> snapshot = pendingSnapshots.remove(player.getUuid());
-        if (snapshot == null || !session.belongsToInventory(event.getInventory())) {
+        if (!session.belongsToInventory(event.getInventory())) {
             return;
         }
-
-        session.applyEditableSnapshot(snapshot);
+        if (snapshot != null) {
+            session.applyEditableSnapshot(snapshot);
+        }
+        session.pollTextInput();
     }
 
     public void handleClose(InventoryCloseEvent event) {
