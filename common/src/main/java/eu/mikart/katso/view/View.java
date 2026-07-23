@@ -23,6 +23,13 @@ public interface View<S, P, I> {
     default void onRefresh(ViewContext<S, P, I> context) {
     }
 
+    /**
+     * Called when the active menu exposes text input and the platform reports a new value.
+     * Anvil menus use this for rename/search text. Other platforms may expose more menu inputs.
+     */
+    default void onTextInput(ViewContext<S, P, I> context, String text) {
+    }
+
     default boolean onBottomClick(ClickContext<S, P, I> click) {
         return false;
     }

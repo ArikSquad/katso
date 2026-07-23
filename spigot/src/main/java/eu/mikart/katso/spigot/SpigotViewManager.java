@@ -56,6 +56,7 @@ public class SpigotViewManager extends ViewManager<Player, ItemStack> implements
         ViewClick click = toViewClick(event.getClick(), event.getHotbarButton());
         if (!session.dispatchBottomClick(event.getSlot(), click)) {
             event.setCancelled(true);
+            platform().scheduleNextTick(session::pollTextInput);
             return;
         }
 
@@ -137,12 +138,14 @@ public class SpigotViewManager extends ViewManager<Player, ItemStack> implements
     protected void scheduleEditableSnapshot(ViewSession<?, Player, ItemStack> session) {
         Map<Integer, ItemStack> snapshot = session.captureEditableSnapshot();
         if (snapshot.isEmpty()) {
+            platform().scheduleNextTick(session::pollTextInput);
             return;
         }
 
         platform().scheduleNextTick(() -> {
             if (!session.closed()) {
                 session.applyEditableSnapshot(snapshot);
+                session.pollTextInput();
             }
         });
     }
@@ -158,9 +161,11 @@ public class SpigotViewManager extends ViewManager<Player, ItemStack> implements
 
         if (!decision.allowInventoryChange()) {
             event.setCancelled(true);
+            platform().scheduleNextTick(session::pollTextInput);
             return;
         }
 
         scheduleEditableSnapshot(session);
+        platform().scheduleNextTick(session::pollTextInput);
     }
 }

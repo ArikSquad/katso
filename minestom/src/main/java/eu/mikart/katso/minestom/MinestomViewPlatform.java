@@ -26,22 +26,49 @@ public class MinestomViewPlatform implements ViewPlatform<Player, ItemStack> {
 
     @Override
     public ViewInventory<ItemStack> createInventory(Player player, ViewType type, Component title) {
-        InventoryType inventoryType = switch (type.kind()) {
-            case CHEST -> switch (type.rows()) {
-                case 1 -> InventoryType.CHEST_1_ROW;
-                case 2 -> InventoryType.CHEST_2_ROW;
-                case 3 -> InventoryType.CHEST_3_ROW;
-                case 4 -> InventoryType.CHEST_4_ROW;
-                case 5 -> InventoryType.CHEST_5_ROW;
-                case 6 -> InventoryType.CHEST_6_ROW;
-                default -> throw new IllegalArgumentException("Unsupported chest rows: " + type.rows());
-            };
-            case HOPPER -> InventoryType.HOPPER;
-            case DISPENSER -> InventoryType.WINDOW_3X3;
-        };
+        InventoryType inventoryType = type.kind() == eu.mikart.katso.view.MenuKind.CHEST
+                ? chestType(type.rows())
+                : fixedType(type);
 
         Inventory inventory = new Inventory(inventoryType, title);
         return new MinestomInventory(inventory);
+    }
+
+    private InventoryType chestType(int rows) {
+        return switch (rows) {
+            case 1 -> InventoryType.CHEST_1_ROW;
+            case 2 -> InventoryType.CHEST_2_ROW;
+            case 3 -> InventoryType.CHEST_3_ROW;
+            case 4 -> InventoryType.CHEST_4_ROW;
+            case 5 -> InventoryType.CHEST_5_ROW;
+            case 6 -> InventoryType.CHEST_6_ROW;
+            default -> throw new IllegalArgumentException("Unsupported chest rows: " + rows);
+        };
+    }
+
+    private InventoryType fixedType(ViewType type) {
+        String[] names = switch (type.kind()) {
+            case HOPPER -> new String[]{"HOPPER"};
+            case DISPENSER, DROPPER -> new String[]{"WINDOW_3X3", "DISPENSER"};
+            case ANVIL -> new String[]{"ANVIL"};
+            case FURNACE -> new String[]{"FURNACE"};
+            case BLAST_FURNACE -> new String[]{"BLAST_FURNACE"};
+            case SMOKER -> new String[]{"SMOKER"};
+            case BREWING_STAND -> new String[]{"BREWING_STAND", "BREWING"};
+            case ENCHANTING_TABLE -> new String[]{"ENCHANTMENT", "ENCHANTING"};
+            case CRAFTING_TABLE -> new String[]{"CRAFTING", "WORKBENCH"};
+            case CARTOGRAPHY_TABLE -> new String[]{"CARTOGRAPHY"};
+            case GRINDSTONE -> new String[]{"GRINDSTONE"};
+            case LOOM -> new String[]{"LOOM"};
+            case STONECUTTER -> new String[]{"STONECUTTER"};
+            case SMITHING_TABLE -> new String[]{"SMITHING", "SMITHING_TABLE"};
+            case BEACON -> new String[]{"BEACON"};
+            case CHEST -> throw new IllegalArgumentException("Chest menus are created by row count");
+        };
+        for (String name : names) {
+            try { return InventoryType.valueOf(name); } catch (IllegalArgumentException ignored) { }
+        }
+        throw new IllegalArgumentException("Minestom does not expose an inventory type for " + type.kind());
     }
 
     @Override
